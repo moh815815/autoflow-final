@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>أوتوفلو — منصة الأتمتة للشركات</title>
+  <meta name="description" content="منصة الأتمتة العربية الأولى للشركات" />
+  <link rel="icon" href="/favicon.ico" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #f5f2eb;
+      direction: rtl;
+    }
+    :root {
+      --ink: #0a0f1e; --paper: #f5f2eb; --gold: #c8a96e;
+      --gold-light: #e8d4a8; --blue: #1a3a6b; --blue-mid: #2756a8;
+      --blue-light: #e8eef8; --green: #1a6b4a; --green-light: #e8f5ee;
+      --red: #8b1a1a; --gray: #8a8f9a; --border: #e8e4dc;
+    }
+    body.dark {
+      --ink: #e8e6e0; --paper: #111827; --border: #2d3748; --gray: #6b7280;
+      background: #111827;
+    }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>
