@@ -1,0 +1,124 @@
+version: '3.9'
+
+services:
+  # ===== PostgreSQL =====
+  db:
+    image: postgres:15-alpine
+    container_name: autoflow_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: autoflow
+      POSTGRES_USER: autoflow_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/utils/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./backend/src/utils/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autoflow_user -d autoflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== Redis =====
+  redis:
+    image: redis:7-alpine
+    container_name: autoflow_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== Backend =====
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: autoflow_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: autoflow
+      DB_USER: autoflow_user
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      FRONTEND_URL: ${FRONTEND_URL}
+      WHATSAPP_ACCOUNT_SID: ${WHATSAPP_ACCOUNT_SID}
+      WHATSAPP_AUTH_TOKEN: ${WHATSAPP_AUTH_TOKEN}
+      WHATSAPP_FROM: ${WHATSAPP_FROM}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      HYPERPAY_ACCESS_TOKEN: ${HYPERPAY_ACCESS_TOKEN}
+      HYPERPAY_ENTITY_ID_VISA: ${HYPERPAY_ENTITY_ID_VISA}
+      HYPERPAY_ENTITY_ID_MADA: ${HYPERPAY_ENTITY_ID_MADA}
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads_data:/app/uploads
+
+  # ===== Frontend =====
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: autoflow_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - certbot_data:/etc/letsencrypt
+
+  # ===== Nginx (Reverse Proxy) =====
+  nginx:
+    image: nginx:alpine
+    container_name: autoflow_nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - certbot_data:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+
+  # ===== Certbot (SSL) =====
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - certbot_data:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    command: certonly --webroot -w /var/www/certbot --email ${ADMIN_EMAIL} -d ${DOMAIN} --agree-tos --no-eff-email
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_data:
+  certbot_data:
+  certbot_www:
